@@ -1,0 +1,166 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+## 1 - Relevar caracteristicas de los atributos
+Obtener datos
+
+```{r}
+library(readr)
+train <- read_csv('C:/Curso UBA/DATOS/train.csv') 
+
+```
+#nombres de las variables
+```{r}
+names(train)
+```
+#caracteristicas y contenido de las variables
+```{r}
+str(train)
+```
+
+#2 - Identificar Y eliminar de datos faltantes: NA
+```{r}
+md.pattern(train,plot = TRUE, rotate.names = TRUE)
+
+```
+
+#se observa una cantidad considerable de datos faltantes para location, un total de 2534 casos
+
+# Se decide eliminar los NA de keyword unicamente para el analisis exploratorio de datos, se conservan los NA de location
+
+# eliminar datos NA
+```{r}
+#train1 <- na.omit(train)
+train1 <- train[! is.na(train$keyword), ]
+```
+
+#visualizar el resultado
+```{r}
+library(mice)
+md.pattern(train1,plot = TRUE, rotate.names = TRUE)
+```
+#verificar cantidad de filas
+
+```{r}
+nrow(train)
+nrow(train1)
+```
+
+#3 - Analisis de variables
+# TARGET
+# la variable target es considerada categorica, tiene los valores discretos, 0:NO Real disaster y  1:Real disaster. 
+# se decide, denominar 0:NO Real disaster: TWEET FALSO y  1:Real disaster: TWEET VERDADERO
+
+# se utiliza un grafico de torta para su representacion
+```{r}
+total1 <- sum(train1$target == 0)
+
+total2 <- sum(train1$target == 1)
+
+porcentaje1 <- round(total1 * 100 / nrow(train1))
+
+porcentaje2 <- round(total2 * 100 / nrow(train1))
+
+auxpie <- data.frame(target = c("0: Tweets Falsos","1: Tweets Verdaderos"), totales = c(total1,total2),porcentaje = c(porcentaje1,porcentaje2))
+
+library(ggplot2)
+
+ggplot(auxpie, aes(x = "", y = porcentaje, fill = target )) + geom_bar(width = 1, stat = "identity", color = "white") + coord_polar("y", start = 0) + geom_text(aes(y = porcentaje,label = paste(porcentaje, "%")),position = position_stack(vjust = 0.5)) + labs(fill = "Target", title = "PORCENTAJE DE TWEETS AGRUPADOS", x = NULL, y = NULL )
+
+```
+#pie totales de tweets por target
+```{r}
+ggplot(auxpie, aes(x = "", y = totales, fill = target )) + geom_bar(width = 1, stat = "identity", color = "white") + coord_polar("y", start = 0) + geom_text(aes(y = totales,label = totales),position = position_stack(vjust = 0.5)) + labs(fill = "Target", title = "TOTALES DE TWEETS AGRUPADOS", x = NULL, y = NULL )
+```
+
+#CONCLUSION:se observa que mas de la mitad de tweets corresponden a tweet falsos
+#KEYWORD
+#se realizo un agrupamiento por keyword y target, contando la cantidad de tweets
+```{r}
+options(gsubfn.engine="R")
+library(sqldf)
+stringsqla = "select keyword,target,count(*) as total from train1 where keyword is not '' group by keyword,target"
+querya = sqldf(stringsqla)
+```
+#se analizan los datos obtenidos consultandolos y ordenandolos por keyword
+```{r}
+querya[order(querya$keyword),]
+```
+
+#CONCLUSION se observan varios casos en que una misma keyword puede estar en un tweet falso y en un tweet verdadero
+
+
+#se calculan los rangos
+```{r}
+range(querya$total)
+```
+#CONCLUSION se observa que como minimo hay un tweet con igual keyword y como maximo 40 tweets con igual keyword
+
+##se representan los resultados con un boxplot para analizar los datos obtenidos
+```{r}
+boxplot(querya$total~querya$target, main = "DISPERSION POR TARGET", col = "blue", ylab = "Tweets con igual keyword", xlab = "Target")
+```
+```{r}
+ggplot(querya, aes(group = target, x = round(target,1), y = total)) + geom_boxplot(outlier.color = "red", outlier.shape = 8, outlier.size = 2, fill ="blue") + ggtitle("TWEETS SEGUN KEYWORD") + xlab ("0 = Tweets falsos      1 = Tweets verdaderos") + ylab ("Tweets con igual keyword") +  stat_summary(fun.y = "mean", geom = "point", shape = 8, size = 2, color = "white") 
+```
+
+
+#CONCLUSION
+#no se observan valores extremos outliners. 
+#las medianas o centros son diferentes para los tweets falsos y verdaderos. Para el caso de los tweets erdaderos la mediana tiene un alor inferior omparando on los tweets falsos
+#la distribucion de los tweets verdaderos presenta un sesgo hacia la derecha, lo cual significa que existen más cantidad de tweets con igual keyword sobre la mediana que por debajo de ella. Para los tweets falsos la distribuion pareeria ser simetria.
+#la media de los tweets falsos es asi igual a la mediana, 
+#la media de los tweets verdaderos se encuentra levemente desplazada a la derecha de la mediana
+# desde este punto de vista se obseran diferencias entre los tweets falsos y verdaderos, en cuanto a los rangos, mediana y media
+
+#TEXT
+#se agrega una nueva columna con la longitud de carateres del mensaje
+```{r}
+train2 <- train1
+
+train2$longitud <- nchar(train1$text)
+
+```
+#se calculan los rangos de la longitud de caracteres de los tweets
+```{r}
+range(train2$longitud)
+```
+#CONCLUSION se observa que un tweet tiene como longitud minima 7 caracteres y como maxima 157 caracteres 
+
+#se representan los resultados con un boxplot para analizar la dispersion de los datos por target
+
+```{r}
+boxplot(train2$longitud~train2$target, main = "TWEETS SEGUN SU LONGITUD", col = "blue", ylab = "Longitud", xlab = "0 = Tweets falsos    1 = Tweets verdaderos")
+```
+```{r}
+library(ggplot2)
+ggplot(train2, aes(group = target, x = target, y = longitud)) + geom_boxplot(fill ="blue") + ggtitle("TWEETS SEGUN SU LONGITUD") + xlab ("0 = Tweets falsos    1 = Tweets verdaderos") + ylab ("Longitud")   +  stat_summary(fun.y = "mean", geom = "point", shape = 8, size = 2, color = "white")
+
+
+
+```
+
+#CONCLUSION
+#no se observan valores extremos para ambas distribuciones. 
+#las medianas o centros son diferentes para los tweets verdaderos y tweets falsos. Para el caso de target igual a 1 es mayor que la de target igual a 0
+#Ambas distribuciones presentan un sesgo hacia la izquierda, lo cual significa que existen más tweets con menor longitud de caracteres debajo de la mediana que sobre de ella. 
+# en ambos casos la media se encuentra a la izquierda de la mediana
+#desde este punto de vista se obseran diferencias entre los tweets falsos y verdaderos, #en cuanto a los rangos, mediana y media
+
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
