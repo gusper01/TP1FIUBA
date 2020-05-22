@@ -15,7 +15,7 @@ Obtener datos
 
 ```{r}
 library(readr)
-train <- read_csv('C:/Curso UBA/DATOS/train.csv') 
+train <- read_csv('./train.csv') 
 
 ```
 #nombres de las variables
