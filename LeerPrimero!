@@ -4,3 +4,5 @@ entre otras cosas)
 
 2 NotebookTP1_Limpieza_y_Valores_Nulos_.ipynb (tiene 2 versiones una se puede ejecutar directamente en colab)
  Posee algunas visualizaciones y operaciones de limpieza
+
+3 notebookR1-OK1.Rmd (Notebook con visualizaciones y algunos analisis de datos - Se requiere RStudio ! y bajar el set de datos train.csv) 
